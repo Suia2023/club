@@ -4,11 +4,13 @@ module club::club {
     use std::type_name;
     use std::vector;
     use sui::clock::{Clock, timestamp_ms};
+    use sui::coin::{Self, Coin};
     use sui::event::emit;
     use sui::object::{Self, UID, new, ID};
+    use sui::sui;
     use sui::table::{Self, Table};
     use sui::table_vec::{Self, TableVec};
-    use sui::transfer::share_object;
+    use sui::transfer::{share_object, public_transfer};
     use sui::tx_context::{Self, TxContext, sender};
     use sui::vec_set::{Self, VecSet, keys};
 
@@ -20,16 +22,19 @@ module club::club {
     const ERR_INVALID_CHANNEL_NAME: u64 = 5;
     const ERR_ADMIN_ALREADY_EXISTS: u64 = 6;
     const ERR_ADMIN_NOT_FOUND: u64 = 7;
-    const ERROR_CHANNEL_NOT_FOUND: u64 = 8;
+    const ERR_CHANNEL_NOT_FOUND: u64 = 8;
+    const ERR_INVALID_FEE: u64 = 9;
 
     // constants
     const VERSION: u64 = 0;
+    const CREATE_CLUB_FEE: u64 = 1000000000;  // 1 SUI
 
     // data structures
     struct Global has key, store {
         id: UID,
         version: u64,
         admins: VecSet<address>,
+        fee_receiver: address,
         clubs: Table<u64, ID>,
         clubs_type_indexer: Table<ascii::String, vector<ID>>,
     }
@@ -83,6 +88,7 @@ module club::club {
             id: new(ctx),
             version: VERSION,
             admins: vec_set::singleton(sender),
+            fee_receiver: sender,
             clubs: table::new(ctx),
             clubs_type_indexer: table::new(ctx),
         };
@@ -91,6 +97,7 @@ module club::club {
 
     entry public fun create_club<T>(
         club_global: &mut Global,
+        fee: Coin<sui::SUI>,
         name: vector<u8>,
         logo: vector<u8>,
         description: vector<u8>,
@@ -101,6 +108,8 @@ module club::club {
     ) {
         assert!(vector::length(&name) > 0, ERR_INVALID_CLUB_NAME);
         assert!(vector::length(&default_channel_name) > 0, ERR_INVALID_CHANNEL_NAME);
+        assert!(coin::value(&fee) == CREATE_CLUB_FEE, ERR_INVALID_FEE);
+        public_transfer(fee, club_global.fee_receiver);
         let default_channel_name_str = utf8(default_channel_name);
         let default_channel = Channel {
             name: default_channel_name_str,
@@ -244,7 +253,7 @@ module club::club {
         ctx: &mut TxContext,
     ) {
         assert!(is_authorized_to_update_club_info(club, tx_context::sender(ctx)), ERR_NOT_AUTHORIZED);
-        assert!(channel_index < vector::length(&club.channels), ERROR_CHANNEL_NOT_FOUND);
+        assert!(channel_index < vector::length(&club.channels), ERR_CHANNEL_NOT_FOUND);
         let channel = vector::borrow_mut(&mut club.channels, channel_index);
         channel.deleted = true;
     }
@@ -257,7 +266,7 @@ module club::club {
         ctx: &mut TxContext,
     ) {
         assert!(is_authorized_to_update_club_info(club, tx_context::sender(ctx)), ERR_NOT_AUTHORIZED);
-        assert!(channel_index < vector::length(&club.channels), ERROR_CHANNEL_NOT_FOUND);
+        assert!(channel_index < vector::length(&club.channels), ERR_CHANNEL_NOT_FOUND);
         let channel = vector::borrow_mut(&mut club.channels, channel_index);
         channel.name = utf8(name);
     }
@@ -270,7 +279,7 @@ module club::club {
         content: vector<u8>,
         ctx: &mut TxContext,
     ) {
-        assert!(channel_index < vector::length(&club.channels), ERROR_CHANNEL_NOT_FOUND);
+        assert!(channel_index < vector::length(&club.channels), ERR_CHANNEL_NOT_FOUND);
         let channel = vector::borrow_mut(&mut club.channels, channel_index);
         let sender = tx_context::sender(ctx);
         let message = Message {
@@ -290,7 +299,7 @@ module club::club {
         ctx: &mut TxContext,
     ) {
         let sender = tx_context::sender(ctx);
-        assert!(channel_index < vector::length(&club.channels), ERROR_CHANNEL_NOT_FOUND);
+        assert!(channel_index < vector::length(&club.channels), ERR_CHANNEL_NOT_FOUND);
         let channel = vector::borrow_mut(&mut club.channels, channel_index);
         assert!(message_index < table_vec::length(&channel.messages), ERR_MESSAGE_NOT_FOUND);
         let message = table_vec::borrow_mut(&mut channel.messages, message_index);

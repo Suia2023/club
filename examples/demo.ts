@@ -192,10 +192,12 @@ class Club {
     typeName: string,
   ) {
     let tx = new TransactionBlock();
+    const [fee] = tx.splitCoins(tx.gas, [tx.pure(1000000000n)]);
     tx.moveCall({
       target: `${this.packageId}::club::create_club`,
       arguments: [
         tx.object(this.globalId),
+        fee,
         tx.pure(this.encodeUtf8(name)),
         tx.pure(this.encodeUtf8(logo)),
         tx.pure(this.encodeUtf8(description)),
