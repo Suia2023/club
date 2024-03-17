@@ -37,6 +37,7 @@ module club::club {
         fee_receiver: address,
         clubs: Table<u64, ID>,
         clubs_type_indexer: Table<ascii::String, vector<ID>>,
+        clubs_owner_indexer: Table<address, vector<ID>>,
     }
 
     struct Club has key, store {
@@ -81,6 +82,29 @@ module club::club {
         channels: vector<String>,
     }
 
+
+    // queries
+    public fun get_club_by_index(global: &Global, index: u64): ID {
+        *table::borrow(&global.clubs, index)
+    }
+
+    public fun get_clubs_by_type(global: &Global, type_name: vector<u8>): vector<ID> {
+        let type_name = ascii::string(type_name);
+        if(!table::contains(&global.clubs_type_indexer, type_name)) {
+            vector::empty()
+        } else {
+            *table::borrow(&global.clubs_type_indexer, type_name)
+        }
+    }
+
+    public fun get_clubs_by_owner(global: &Global, owner: address): vector<ID> {
+        if(!table::contains(&global.clubs_owner_indexer, owner)) {
+            vector::empty()
+        } else {
+            *table::borrow(&global.clubs_owner_indexer, owner)
+        }
+    }
+
     // ====== Functions ======
     fun init(ctx: &mut TxContext) {
         let sender = tx_context::sender(ctx);
@@ -91,6 +115,7 @@ module club::club {
             fee_receiver: sender,
             clubs: table::new(ctx),
             clubs_type_indexer: table::new(ctx),
+            clubs_owner_indexer: table::new(ctx),
         };
         share_object(global);
     }
@@ -133,10 +158,18 @@ module club::club {
         };
         let id = object::id(&club);
         table::add(&mut club_global.clubs, index, id);
+        // update clubs type indexer
         if (!table::contains(&club_global.clubs_type_indexer, type_name)) {
             table::add(&mut club_global.clubs_type_indexer, type_name, vector::singleton(id));
         } else {
             let clubs = table::borrow_mut(&mut club_global.clubs_type_indexer, type_name);
+            vector::push_back(clubs, id);
+        };
+        // update clubs owner indexer
+        if (!table::contains(&club_global.clubs_owner_indexer, club.creator)) {
+            table::add(&mut club_global.clubs_owner_indexer, club.creator, vector::singleton(id));
+        } else {
+            let clubs = table::borrow_mut(&mut club_global.clubs_owner_indexer, club.creator);
             vector::push_back(clubs, id);
         };
         emit(ClubCreated {

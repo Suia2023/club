@@ -170,6 +170,14 @@ interface ClubInfo {
   clubType: string;
 }
 
+interface UpdateClubInfoParams {
+  name?: string;
+  logo?: string;
+  description?: string;
+  announcement?: string;
+  threshold?: number;
+}
+
 class Club {
   readonly packageId: string;
   readonly globalId: string;
@@ -223,15 +231,15 @@ class Club {
     return addClubChannelTxn;
   }
 
-  async removeClubChannel(signer: Ed25519Keypair, clubId: string, channelIndex: number) {
+  async deleteClubChannel(signer: Ed25519Keypair, clubId: string, channelIndex: number) {
     let tx = new TransactionBlock();
     tx.moveCall({
-      target: `${this.packageId}::club::remove_club_channel`,
+      target: `${this.packageId}::club::delete_club_channel`,
       arguments: [tx.object(this.globalId), tx.object(clubId), tx.pure(channelIndex)],
     });
-    const removeClubChannelTxn = await sendTx(tx, signer);
-    console.log('removeClubChannelTxn', JSON.stringify(removeClubChannelTxn, null, 2));
-    return removeClubChannelTxn;
+    const deleteClubChannelTxn = await sendTx(tx, signer);
+    console.log('deleteClubChannelTxn', JSON.stringify(deleteClubChannelTxn, null, 2));
+    return deleteClubChannelTxn;
   }
 
   async updateClubChannelName(signer: Ed25519Keypair, clubId: string, channelIndex: number, channelName: string) {
@@ -293,6 +301,75 @@ class Club {
     return deleteMessageTxn;
   }
 
+  async addClubAdmin(signer: Ed25519Keypair, clubId: string, admin: string) {
+    let tx = new TransactionBlock();
+    tx.moveCall({
+      target: `${this.packageId}::club::add_club_admin`,
+      arguments: [tx.object(this.globalId), tx.object(clubId), tx.pure(admin)],
+    });
+    const addClubAdminTxn = await sendTx(tx, signer);
+    console.log('addClubAdminTxn', JSON.stringify(addClubAdminTxn, null, 2));
+    return addClubAdminTxn;
+  }
+
+  async removeClubAdmin(signer: Ed25519Keypair, clubId: string, admin: string) {
+    let tx = new TransactionBlock();
+    tx.moveCall({
+      target: `${this.packageId}::club::remove_club_admin`,
+      arguments: [tx.object(this.globalId), tx.object(clubId), tx.pure(admin)],
+    });
+    const removeClubAdminTxn = await sendTx(tx, signer);
+    console.log('removeClubAdminTxn', JSON.stringify(removeClubAdminTxn, null, 2));
+    return removeClubAdminTxn;
+  }
+
+  async updateClubInfo(signer: Ed25519Keypair, clubId: string, info: UpdateClubInfoParams) {
+    let tx = new TransactionBlock();
+    let { name, logo, description, announcement, threshold } = info;
+    let updated = false;
+    if (name !== undefined) {
+      tx.moveCall({
+        target: `${this.packageId}::club::update_club_name`,
+        arguments: [tx.object(this.globalId), tx.object(clubId), tx.pure(this.encodeUtf8(name))],
+      });
+      updated = true;
+    }
+    if (logo !== undefined) {
+      tx.moveCall({
+        target: `${this.packageId}::club::update_club_logo`,
+        arguments: [tx.object(this.globalId), tx.object(clubId), tx.pure(this.encodeUtf8(logo))],
+      });
+      updated = true;
+    }
+    if (description !== undefined) {
+      tx.moveCall({
+        target: `${this.packageId}::club::update_club_description`,
+        arguments: [tx.object(this.globalId), tx.object(clubId), tx.pure(this.encodeUtf8(description))],
+      });
+      updated = true;
+    }
+    if (announcement !== undefined) {
+      tx.moveCall({
+        target: `${this.packageId}::club::update_club_announcement`,
+        arguments: [tx.object(this.globalId), tx.object(clubId), tx.pure(this.encodeUtf8(announcement))],
+      });
+      updated = true;
+    }
+    if (threshold !== undefined) {
+      tx.moveCall({
+        target: `${this.packageId}::club::update_club_threshold`,
+        arguments: [tx.object(this.globalId), tx.object(clubId), tx.pure(threshold)],
+      });
+      updated = true;
+    }
+    if (!updated) {
+      throw new Error('no update info');
+    }
+    const updateClubInfoTxn = await sendTx(tx, signer);
+    console.log('updateClubInfoTxn', JSON.stringify(updateClubInfoTxn, null, 2));
+    return updateClubInfoTxn;
+  }
+
   async getAllClubsByType(): Promise<ClubsByType> {
     const global = await client.getObject({
       id: this.globalId,
@@ -337,6 +414,72 @@ class Club {
     });
     // console.log('clubObj', JSON.stringify(clubObj, null, 2));
     return clubObj?.data;
+  }
+
+  async getClubIdByIndex(index: number): Promise<string | null | undefined> {
+    tx = new TransactionBlock();
+    tx.moveCall({
+      target: `${this.packageId}::club::get_club_by_index`,
+      arguments: [tx.object(this.globalId), tx.pure(index)],
+    });
+    const res = await client.devInspectTransactionBlock({
+      sender: '0x36e278bb555e0501cb58e24561ae4af32d624d526fa565ab21dc366eae1e22b1', // a random sender
+      transactionBlock: tx,
+    });
+    // console.log('getClubIdByIndex', JSON.stringify(res.results, null, 2));
+    const serData = Uint8Array.from((res as any).results[0].returnValues[0][0]);
+    // const serType = (res as any).results[0].returnValues[0][1]
+    // console.log('serData', serData);
+    // console.log('serType', serType);
+    // bcs_ser.registerStructType('0x2::object::ID', {
+    //   bytes: 'address',
+    // })
+    const clubId = bcs_ser.de('address', serData);
+    return `0x${clubId}`;
+  }
+
+  async getClubsByOwner(owner: string): Promise<string[]> {
+    tx = new TransactionBlock();
+    tx.moveCall({
+      target: `${this.packageId}::club::get_clubs_by_owner`,
+      arguments: [tx.object(this.globalId), tx.pure(owner)],
+    });
+    const res = await client.devInspectTransactionBlock({
+      sender: '0x36e278bb555e0501cb58e24561ae4af32d624d526fa565ab21dc366eae1e22b1', // a random sender
+      transactionBlock: tx,
+    });
+    const serData = Uint8Array.from((res as any).results[0].returnValues[0][0]);
+    // const serType = (res as any).results[0].returnValues[0][1]
+    // console.log('serData', serData);
+    // console.log('serType', serType);
+    // bcs_ser.registerStructType('0x2::object::ID', {
+    //   bytes: 'address',
+    // })
+    const data = bcs_ser.de('vector<address>', serData);
+    // console.log('data', data);
+    return data.map((d: any) => `0x${d}`);
+  }
+
+  async getClubsByType(type: string): Promise<string[]> {
+    tx = new TransactionBlock();
+    tx.moveCall({
+      target: `${this.packageId}::club::get_clubs_by_type`,
+      arguments: [tx.object(this.globalId), tx.pure(this.encodeUtf8(type))],
+    });
+    const res = await client.devInspectTransactionBlock({
+      sender: '0x36e278bb555e0501cb58e24561ae4af32d624d526fa565ab21dc366eae1e22b1', // a random sender
+      transactionBlock: tx,
+    });
+    const serData = Uint8Array.from((res as any).results[0].returnValues[0][0]);
+    // const serType = (res as any).results[0].returnValues[0][1]
+    // console.log('serData', serData);
+    // console.log('serType', serType);
+    // bcs_ser.registerStructType('0x2::object::ID', {
+    //   bytes: 'address',
+    // })
+    const data = bcs_ser.de('vector<address>', serData);
+    // console.log('data', data);
+    return data.map((d: any) => `0x${d}`);
   }
 
   async getClubChannelMsgs(clubId: string, channelIndex: number, offset: number, limit: number): Promise<ClubMsg[]> {
@@ -407,6 +550,17 @@ async function interact(appMeta: AppMeta, signer: Ed25519Keypair, user: Ed25519K
   const createClubEvent = clubRes.events![0].parsedJson;
   console.log('createClubEvent', JSON.stringify(createClubEvent, null, 2));
   const clubId = (createClubEvent as any).id;
+  // add club admin
+  await club.addClubAdmin(signer, clubId, user.toSuiAddress());
+  // remove club admin
+  await club.removeClubAdmin(signer, clubId, user.toSuiAddress());
+  // update club info
+  await club.updateClubInfo(signer, clubId, {
+    name: '2 mist sui club',
+    logo: 'new logo',
+    description: '新的 description',
+    threshold: 2,
+  });
   // new message
   await club.newMessage(signer, clubId, 0, 'hello, world!', MessageType.RAW);
   await club.newMessage(signer, clubId, 0, '你好，世界！😁', MessageType.RAW);
@@ -419,10 +573,18 @@ async function interact(appMeta: AppMeta, signer: Ed25519Keypair, user: Ed25519K
   await club.newMessage(signer, clubId, 1, '你好，世界！😁', MessageType.XOR);
   // delete message
   await club.deleteMessage(signer, clubId, 0, 0);
+  // delete channel
+  await club.deleteClubChannel(signer, clubId, 1);
 }
 
 async function queries(appMeta: AppMeta) {
   const club = new Club(appMeta, client);
+  // get all clubs by owner
+  const clubsByOwner = await club.getClubsByOwner(admin.toSuiAddress());
+  console.log('clubsByOwner', JSON.stringify(clubsByOwner, null, 2));
+  // get club id by index
+  const clubIdByIndex = await club.getClubIdByIndex(0);
+  console.log('clubIdByIndex: ', clubIdByIndex);
   // list all clubs by type
   const clubsByType = await club.getAllClubsByType();
   console.log('clubsByType', JSON.stringify(clubsByType, null, 2));
@@ -469,9 +631,9 @@ async function main() {
   // publish
   const appMeta = await publishClub(admin);
   // const appMeta = {
-  //   "packageId": "0x554cc8e263f422c9aef367cb9f6ec7cae72443522416fa3fe8464aad32cc930a",
-  //   "globalId": "0x7728e2f5657ae373f922b78fb289910628614bff0e5a3d8270405573c71124a6"
-  // }
+  //   packageId: '0x1b8abd386407e57515912ebe69f380d243ad1b85f8546a4077b553bf5fbaaf3d',
+  //   globalId: '0x2fc02974ac9858522c4d6c0a9e570db367df0b912997d1e7ddacab1f871a64b8',
+  // };
 
   console.log(`appMeta: ${JSON.stringify(appMeta, null, 2)}`);
 
