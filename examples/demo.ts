@@ -561,18 +561,10 @@ async function interact(appMeta: AppMeta, signer: Ed25519Keypair, user: Ed25519K
     description: '新的 description',
     threshold: 2,
   });
-  // new message
-  await club.newMessage(signer, clubId, 0, 'hello, world!', MessageType.RAW);
-  await club.newMessage(signer, clubId, 0, '你好，世界！😁', MessageType.RAW);
   // create channel
   await club.addClubChannel(signer, clubId, '中文');
   // update channel name
   await club.updateClubChannelName(signer, clubId, 0, '默认');
-  // new message
-  await club.newMessage(signer, clubId, 1, 'hello, world!', MessageType.XOR);
-  await club.newMessage(signer, clubId, 1, '你好，世界！😁', MessageType.XOR);
-  // delete message
-  await club.deleteMessage(signer, clubId, 0, 0);
   // delete channel
   await club.deleteClubChannel(signer, clubId, 1);
 }
@@ -598,11 +590,6 @@ async function queries(appMeta: AppMeta) {
   // get one club info
   const clubInfo = await club.getClubInfoById(clubId);
   console.log('clubInfo', JSON.stringify(clubInfo, null, 2));
-  // get club channel msgs
-  const msgs = await club.getClubChannelMsgs(clubId, 0, 0, 3);
-  console.log('msgs', JSON.stringify(msgs, null, 2));
-  const msgs2 = await club.getClubChannelMsgs(clubId, 1, 0, 3);
-  console.log('msgs2', JSON.stringify(msgs2, null, 2));
 }
 
 async function main() {

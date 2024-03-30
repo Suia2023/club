@@ -3,27 +3,23 @@ module club::club {
     use std::string::{utf8, String};
     use std::type_name;
     use std::vector;
-    use sui::clock::{Clock, timestamp_ms};
     use sui::coin::{Self, Coin};
     use sui::event::emit;
     use sui::object::{Self, UID, new, ID};
     use sui::sui;
     use sui::table::{Self, Table};
-    use sui::table_vec::{Self, TableVec};
     use sui::transfer::{share_object, public_transfer};
     use sui::tx_context::{Self, TxContext, sender};
     use sui::vec_set::{Self, VecSet, keys};
 
     // errors
     const ERR_NOT_AUTHORIZED: u64 = 1;
-    const ERR_MESSAGE_NOT_FOUND: u64 = 2;
-    const ERR_MESSAGE_DELETED: u64 = 3;
-    const ERR_INVALID_CLUB_NAME: u64 = 4;
-    const ERR_INVALID_CHANNEL_NAME: u64 = 5;
-    const ERR_ADMIN_ALREADY_EXISTS: u64 = 6;
-    const ERR_ADMIN_NOT_FOUND: u64 = 7;
-    const ERR_CHANNEL_NOT_FOUND: u64 = 8;
-    const ERR_INVALID_FEE: u64 = 9;
+    const ERR_INVALID_CLUB_NAME: u64 = 2;
+    const ERR_INVALID_CHANNEL_NAME: u64 = 3;
+    const ERR_ADMIN_ALREADY_EXISTS: u64 = 4;
+    const ERR_ADMIN_NOT_FOUND: u64 = 5;
+    const ERR_CHANNEL_NOT_FOUND: u64 = 6;
+    const ERR_INVALID_FEE: u64 = 7;
 
     // constants
     const VERSION: u64 = 0;
@@ -56,14 +52,6 @@ module club::club {
 
     struct Channel has store {
         name: String,
-        deleted: bool,
-        messages: TableVec<Message>,
-    }
-
-    struct Message has copy, drop, store {
-        sender: address,
-        content: vector<u8>,
-        timestamp: u64,
         deleted: bool,
     }
 
@@ -139,7 +127,6 @@ module club::club {
         let default_channel = Channel {
             name: default_channel_name_str,
             deleted: false,
-            messages: table_vec::empty(ctx),
         };
         let index = table::length(&club_global.clubs);
         let type_name = type_name::into_string(type_name::get<T>());
@@ -274,7 +261,6 @@ module club::club {
         let channel = Channel {
             name: utf8(name),
             deleted: false,
-            messages: table_vec::empty(ctx),
         };
         vector::push_back(&mut club.channels, channel);
     }
@@ -302,43 +288,5 @@ module club::club {
         assert!(channel_index < vector::length(&club.channels), ERR_CHANNEL_NOT_FOUND);
         let channel = vector::borrow_mut(&mut club.channels, channel_index);
         channel.name = utf8(name);
-    }
-
-    entry public fun new_message(
-        clock: &Clock,
-        _club_global: &Global,
-        club: &mut Club,
-        channel_index: u64,
-        content: vector<u8>,
-        ctx: &mut TxContext,
-    ) {
-        assert!(channel_index < vector::length(&club.channels), ERR_CHANNEL_NOT_FOUND);
-        let channel = vector::borrow_mut(&mut club.channels, channel_index);
-        let sender = tx_context::sender(ctx);
-        let message = Message {
-            sender,
-            content,
-            timestamp: timestamp_ms(clock),
-            deleted: false,
-        };
-        table_vec::push_back(&mut channel.messages, message);
-    }
-
-    entry public fun delete_message(
-        _club_global: &Global,
-        club: &mut Club,
-        channel_index: u64,
-        message_index: u64,
-        ctx: &mut TxContext,
-    ) {
-        let sender = tx_context::sender(ctx);
-        assert!(channel_index < vector::length(&club.channels), ERR_CHANNEL_NOT_FOUND);
-        let channel = vector::borrow_mut(&mut club.channels, channel_index);
-        assert!(message_index < table_vec::length(&channel.messages), ERR_MESSAGE_NOT_FOUND);
-        let message = table_vec::borrow_mut(&mut channel.messages, message_index);
-        assert!(message.sender == sender, ERR_NOT_AUTHORIZED);
-        assert!(!message.deleted, ERR_MESSAGE_DELETED);
-        message.content = vector::empty();
-        message.deleted = true;
     }
 }
