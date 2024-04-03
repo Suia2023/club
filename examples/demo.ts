@@ -465,7 +465,7 @@ class Club {
     tx.moveCall({
       target: `${this.packageId}::club::get_clubs_by_type`,
       arguments: [tx.object(this.globalId)],
-      typeArguments: [type]
+      typeArguments: [type],
     });
     const res = await client.devInspectTransactionBlock({
       sender: '0x36e278bb555e0501cb58e24561ae4af32d624d526fa565ab21dc366eae1e22b1', // a random sender
@@ -589,9 +589,13 @@ async function queries(appMeta: AppMeta) {
   }
   const suiClubs = await club.getClubsByType('0x2::coin::Coin<0x2::sui::SUI>');
   console.log('suiClubs', JSON.stringify(suiClubs, null, 2));
-  const suiClubs2 = await club.getClubsByType('0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>');
+  const suiClubs2 = await club.getClubsByType(
+    '0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>',
+  );
   console.log('suiClubs2', JSON.stringify(suiClubs2, null, 2));
-  const suiClubs3 = await club.getClubsByType('0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>');
+  const suiClubs3 = await club.getClubsByType(
+    '0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>',
+  );
   console.log('suiClubs3', JSON.stringify(suiClubs3, null, 2));
   // get one club info
   const clubInfo = await club.getClubInfoById(clubId);

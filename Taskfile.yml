@@ -22,3 +22,9 @@ tasks:
     sources:
       - src/**/*.ts
       - examples/**/*.ts
+  getBalanceDemo:
+    cmds:
+      - pnpm getBalanceDemo
+    sources:
+      - src/**/*.ts
+      - examples/**/*.ts

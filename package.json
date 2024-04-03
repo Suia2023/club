@@ -3,20 +3,23 @@
   "version": "1.0.0",
   "scripts": {
     "demo": "ts-node examples/demo.ts",
+    "getBalanceDemo": "ts-node examples/getBalanceDemo.ts",
     "prettier": "prettier --write examples",
     "test": "jest"
   },
   "dependencies": {
-    "@mysten/bcs": "^0.8.1",
-    "@mysten/sui.js": "^0.46.0"
+    "@mysten/bcs": "^0.11.1",
+    "@mysten/kiosk": "^0.8.6",
+    "@mysten/sui.js": "^0.51.2",
+    "api": "^6.1.1"
   },
   "devDependencies": {
-    "@types/node": "^20.3.1",
     "@types/jest": "^29.5.12",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.1.2",
+    "@types/node": "^20.3.1",
     "dotenv": "^16.0.2",
+    "jest": "^29.7.0",
     "prettier": "^2.8.8",
+    "ts-jest": "^29.1.2",
     "ts-node": "^10.9.1",
     "tsup": "^6.7.0",
     "typescript": "^5.0.4"
