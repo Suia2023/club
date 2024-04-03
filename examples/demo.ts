@@ -464,7 +464,8 @@ class Club {
     tx = new TransactionBlock();
     tx.moveCall({
       target: `${this.packageId}::club::get_clubs_by_type`,
-      arguments: [tx.object(this.globalId), tx.pure(this.encodeUtf8(type))],
+      arguments: [tx.object(this.globalId)],
+      typeArguments: [type]
     });
     const res = await client.devInspectTransactionBlock({
       sender: '0x36e278bb555e0501cb58e24561ae4af32d624d526fa565ab21dc366eae1e22b1', // a random sender
@@ -585,8 +586,13 @@ async function queries(appMeta: AppMeta) {
     const clubIds = clubsByType[type];
     console.log(`type: ${type}, clubIds: ${clubIds.join(', ')}`);
     clubId = clubIds[0];
-    break;
   }
+  const suiClubs = await club.getClubsByType('0x2::coin::Coin<0x2::sui::SUI>');
+  console.log('suiClubs', JSON.stringify(suiClubs, null, 2));
+  const suiClubs2 = await club.getClubsByType('0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>');
+  console.log('suiClubs2', JSON.stringify(suiClubs2, null, 2));
+  const suiClubs3 = await club.getClubsByType('0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>');
+  console.log('suiClubs3', JSON.stringify(suiClubs3, null, 2));
   // get one club info
   const clubInfo = await club.getClubInfoById(clubId);
   console.log('clubInfo', JSON.stringify(clubInfo, null, 2));
@@ -618,8 +624,8 @@ async function main() {
   // publish
   const appMeta = await publishClub(admin);
   // const appMeta = {
-  //   packageId: '0x1b8abd386407e57515912ebe69f380d243ad1b85f8546a4077b553bf5fbaaf3d',
-  //   globalId: '0x2fc02974ac9858522c4d6c0a9e570db367df0b912997d1e7ddacab1f871a64b8',
+  //   packageId: '0x81b4219558355f78d68e7bb630a2505c9a855a66bba613a36b5b0c8efaeca536',
+  //   globalId: '0x16dc2171343753f936e227c986b14ad0b145e2524339e370b46bd4d94692f072',
   // };
 
   console.log(`appMeta: ${JSON.stringify(appMeta, null, 2)}`);

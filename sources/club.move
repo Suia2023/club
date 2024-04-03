@@ -76,8 +76,8 @@ module club::club {
         *table::borrow(&global.clubs, index)
     }
 
-    public fun get_clubs_by_type(global: &Global, type_name: vector<u8>): vector<ID> {
-        let type_name = ascii::string(type_name);
+    public fun get_clubs_by_type<T>(global: &Global): vector<ID> {
+        let type_name = type_name::into_string(type_name::get<T>());
         if(!table::contains(&global.clubs_type_indexer, type_name)) {
             vector::empty()
         } else {
